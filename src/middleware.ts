@@ -1,23 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/"];
-
 export function middleware(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  const { pathname } = request.nextUrl;
   const hasSession = Boolean(request.cookies.get("idb_session")?.value);
 
-  if (!hasSession && !PUBLIC_PATHS.includes(pathname)) {
+  // Hanya alihkan pengguna TANPA sesi ke halaman login, kecuali path publik (/ dan /login).
+  // Jangan alihkan pengguna dengan sesi (baik valid maupun tidak) dari /login ke /dashboard
+  // di sini, karena pengecekan validitas sesi sepenuhnya dihalaman /login dan /dashboard sendiri.
+  // Melakukannya di middleware akan menyebabkan loop pengalihan bila cookie ada tetapi tidak valid.
+  if (!hasSession && pathname !== "/login" && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    if (pathname !== "/") url.searchParams.set("next", `${pathname}${search}`);
-    return NextResponse.redirect(url);
-  }
-
-  if (hasSession && pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
+    url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
