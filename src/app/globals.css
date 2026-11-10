@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Midnight Navy × Electric Blue × Warm Ivory */
+  --paper: 50 30% 96%; /* Warm Ivory #F8F7F2 */
+  --surface: 0 0% 100%; /* White */
+  --ink: 221 39% 11%; /* Midnight Navy #111827 */
+  --muted: 220 8% 45%;
+  --line: 40 16% 89%;
+  --navy: 221 39% 11%; /* Midnight Navy */
+  --navy-soft: 222 36% 18%;
+  --brand: 221 83% 53%; /* Electric Blue untuk teks & isian */
+  --brand-bright: 217 91% 60%; /* #3B82F6 Electric Blue murni */
+  --brand-deep: 222 76% 42%;
+  --brand-fg: 0 0% 100%;
+  --brand-soft: 214 100% 96%;
+  --accent: 217 91% 60%;
+  --accent-soft: 214 100% 96%;
+  --gold: 38 92% 50%; /* Amber #F59E0B */
+  --free: 163 94% 24%; /* Emerald untuk teks/isian */
+  --free-bright: 160 84% 39%; /* Emerald #10B981 */
+  --free-soft: 158 65% 95%;
+  --pending: 32 94% 34%; /* Amber untuk teks/isian */
+  --pending-bright: 38 92% 50%; /* Amber #F59E0B */
+  --pending-soft: 40 100% 95%;
+  --busy: 348 84% 42%; /* Rose untuk teks/isian */
+  --busy-bright: 350 71% 60%; /* Rose #F43F5E */
+  --busy-soft: 350 100% 96%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+  }
+}
+
+* {
+  border-color: hsl(var(--line));
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: hsl(var(--paper));
+  background-image:
+    radial-gradient(68rem 40rem at 104% -10%, hsl(var(--brand-bright) / 0.08), transparent 60%),
+    radial-gradient(52rem 34rem at -10% 108%, hsl(var(--navy) / 0.05), transparent 58%);
+  background-attachment: fixed;
+  color: hsl(var(--ink));
+  font-feature-settings: "cv11", "ss01";
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: hsl(var(--brand-bright) / 0.26);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  letter-spacing: -0.026em;
+}
+
+h1 {
+  font-weight: 700;
+}
+
+::placeholder {
+  opacity: 1;
+}
+
+/* Scrollbar tipis agar panel data terasa ringan. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--ink) / 0.16) transparent;
+}
+
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted;
+  }
+
+  .eyebrow::before {
+    content: "";
+    @apply h-px w-5 rounded-full bg-accent;
+  }
+
+  .surface {
+    @apply rounded-2xl border border-line bg-surface shadow-card transition-[box-shadow,border-color,transform] duration-300 ease-out;
+  }
+
+  .surface-hover {
+    @apply hover:-translate-y-0.5 hover:border-brand/20 hover:shadow-lift;
+  }
+
+  .surface-flat {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  .glass {
+    background: hsl(var(--surface) / 0.74);
+    -webkit-backdrop-filter: blur(16px) saturate(1.15);
+    backdrop-filter: blur(16px) saturate(1.15);
+  }
+
+  /* Permukaan navy dengan sorotan electric blue — dipakai hero, sidebar, dan tiket. */
+  .panel-navy {
+    background:
+      radial-gradient(120% 90% at 0% 0%, hsl(var(--brand-bright) / 0.26), transparent 58%),
+      radial-gradient(90% 70% at 110% 110%, hsl(var(--brand-bright) / 0.16), transparent 60%),
+      linear-gradient(163deg, hsl(var(--navy-soft)) 0%, hsl(var(--navy)) 62%);
+  }
+
+  .link-quiet {
+    @apply text-brand underline decoration-brand/25 underline-offset-4 transition-colors hover:decoration-accent;
+  }
+
+  .table-clean {
+    @apply w-full border-collapse text-left text-sm;
+  }
+
+  .table-clean th {
+    @apply whitespace-nowrap border-b border-line pb-2.5 pr-4 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted;
+  }
+
+  .table-clean td {
+    @apply border-b border-line/70 py-3 pr-4 align-middle;
+  }
+
+  .table-clean tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .accent-rule {
+    @apply h-[3px] w-10 rounded-full bg-accent;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .tap-target {
+    @apply min-h-11 min-w-11;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .animate-in {
+    animation: fade-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .surface,
+  .surface-flat {
+    box-shadow: none;
+    border-color: #d6d3d1;
+  }
+
+  .print-full {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+}
