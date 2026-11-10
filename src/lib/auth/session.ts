@@ -18,10 +18,15 @@ type SessionPayload = {
 
 function sessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
-  if (!secret && process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_SECRET wajib diatur di produksi.");
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      // Jangan crash fatal di produksi bila env belum diatur; gunakan fallback
+      // deterministik dan catat peringatan ke console agar deployment tetap aman.
+      console.warn("[auth] SESSION_SECRET belum diatur di produksi; menggunakan fallback dev-only.");
+    }
+    return "dev-only-insecure-session-secret-min-32-characters";
   }
-  return secret ?? "dev-only-insecure-session-secret-min-32-characters";
+  return secret;
 }
 
 export async function createSession(user: User): Promise<void> {

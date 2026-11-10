@@ -38,7 +38,15 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { error: "Akun Anda dinonaktifkan. Hubungi Sarana Prasarana.", email: rawEmail };
   }
 
-  await createSession(user);
+  try {
+    await createSession(user);
+  } catch (error) {
+    return {
+      error: "Gagal membuat sesi login. Silakan coba lagi atau hubungi administrator.",
+      email: rawEmail,
+    };
+  }
+
   redirect(safeNextPath(String(formData.get("next") ?? ""), "/dashboard"));
 }
 
