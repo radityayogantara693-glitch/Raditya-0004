@@ -242,6 +242,15 @@ Penjadwalan produksi (pilih salah satu):
 - **cron-job.org / GitHub Actions** — panggil URL di atas tiap hari pukul 00:00 UTC.
 - **pg_cron** — buat job SQL yang memanggil `select public.release_no_shows(); select public.complete_finished();`. Catatan: email no-show hanya terkirim bila sweep dipanggil lewat endpoint aplikasi.
 
+### Seed data demo ke Supabase production
+
+Tabel Supabase production awalnya kosong. Isi akun demo + katalog ruangan dengan salah satu cara:
+
+- **SQL Manual:** buka Supabase SQL Editor, jalankan berkas `supabase/seed-demo-data.sql`. Berkas berisi 5 akun demo dan 29 ruangan (idempotent, aman diulang).
+- **Endpoint otomatis:** panggil `POST /api/admin/seed?secret=SEED_SECRET` (atau header `Authorization: Bearer SEED_SECRET`). Endpoint menanam pengguna dan ruangan dari `src/lib/db/seed.ts` ke Supabase lewat service role (idempotent via `ON CONFLICT`).
+
+Atur variabel `SEED_SECRET` di Vercel (Settings → Environment Variables) sebelum menggunakan endpoint.
+
 ### Ekspor laporan
 
 ```http
