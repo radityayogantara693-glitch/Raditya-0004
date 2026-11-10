@@ -238,8 +238,8 @@ Respons: jumlah slot yang dilepas dan sesi yang ditutup.
 
 Penjadwalan produksi (pilih salah satu):
 
-- **Vercel Cron** — `vercel.json` sudah menyertakan jadwal tiap 5 menit. Vercel mengirim header `Authorization: Bearer $CRON_SECRET` bila variabel tersebut diatur.
-- **cron-job.org / GitHub Actions** — panggil URL di atas tiap 5 menit.
+- **Vercel Cron** — `vercel.json` sudah menyertakan jadwal tiap hari pukul 00:00 UTC (`0 0 * * *`). Vercel mengirim header `Authorization: Bearer $CRON_SECRET` bila variabel tersebut diatur.
+- **cron-job.org / GitHub Actions** — panggil URL di atas tiap hari pukul 00:00 UTC.
 - **pg_cron** — buat job SQL yang memanggil `select public.release_no_shows(); select public.complete_finished();`. Catatan: email no-show hanya terkirim bila sweep dipanggil lewat endpoint aplikasi.
 
 ### Ekspor laporan

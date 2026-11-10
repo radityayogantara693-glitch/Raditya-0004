@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * US-03: pelepasan slot no-show & penutupan sesi.
- * Dijadwalkan setiap 5 menit (lihat README) dengan header:
+ * Dijadwalkan setiap hari pukul 00:00 UTC (lihat README) dengan header:
  *   Authorization: Bearer <CRON_SECRET>
  * juga menerima ?secret=<CRON_SECRET> untuk pengujian manual.
  */
