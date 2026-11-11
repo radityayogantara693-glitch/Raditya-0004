@@ -7,8 +7,9 @@ import type {
   Ticket,
   User,
 } from "@/types";
+import { createHash } from "node:crypto";
+
 import { addDaysToKey, witaDateKey, witaToInstant } from "@/lib/time";
-import { ticketCode, randomId, randomToken } from "@/lib/crypto";
 
 export interface DbShape {
   version: number;
@@ -22,6 +23,27 @@ export interface DbShape {
 
 const nowIso = () => new Date().toISOString();
 
+/**
+ * ID deterministik untuk data demo.
+ *
+ * Penting untuk deployment serverless: setiap instance bisa membuat seed
+ * sendiri (filesystem read-only), jadi ID harus sama agar cookie sesi yang
+ * menunjuk `userId` tetap valid di instance mana pun.
+ */
+function stableId(scope: string, key: string): string {
+  const hex = createHash("sha256").update(`idb-demo:${scope}:${key}`).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+function stableTicketCode(bookingCode: string): string {
+  const hex = createHash("sha256").update(`idb-demo:ticket:${bookingCode}`).digest("hex").toUpperCase();
+  return `IDB-${hex.slice(0, 4)}-${hex.slice(4, 8)}`;
+}
+
+function stableToken(bookingCode: string): string {
+  return createHash("sha256").update(`idb-demo:token:${bookingCode}`).digest("base64url");
+}
+
 function iso(dateKey: string, time: string) {
   return witaToInstant(dateKey, time).toISOString();
 }
@@ -29,7 +51,7 @@ function iso(dateKey: string, time: string) {
 function makeUser(input: Omit<User, "id" | "createdAt" | "noShowStrikes" | "suspendedUntil" | "isActive">): User {
   return {
     ...input,
-    id: randomId(),
+    id: stableId("user", input.email),
     isActive: true,
     noShowStrikes: 0,
     suspendedUntil: null,
@@ -64,7 +86,7 @@ function makeRoom(input: {
   description?: string;
 }): Room {
   return {
-    id: randomId(),
+    id: stableId("room", input.code),
     code: input.code,
     name: input.name,
     category: input.category,
@@ -404,7 +426,7 @@ export function buildSeed(): DbShape {
     checkedInAt?: string | null;
     seq: number;
   }): Booking => ({
-    id: randomId(),
+    id: stableId("booking", `BK-${input.dateKey.replaceAll("-", "").slice(2)}-${String(input.seq).padStart(3, "0")}`),
     code: `BK-${input.dateKey.replaceAll("-", "").slice(2)}-${String(input.seq).padStart(3, "0")}`,
     roomId: input.room.id,
     userId: input.user.id,
@@ -532,10 +554,10 @@ export function buildSeed(): DbShape {
   const tickets: Ticket[] = bookings
     .filter((item) => ["approved", "completed", "checked_in"].includes(item.status))
     .map((item) => ({
-      id: randomId(),
+      id: stableId("ticket", item.code),
       bookingId: item.id,
-      code: ticketCode(),
-      token: randomToken(),
+      code: stableTicketCode(item.code),
+      token: stableToken(item.code),
       status: item.status === "completed" ? "used" : "issued",
       issuedAt: item.decidedAt ?? nowIso(),
       expiresAt: item.endAt,
@@ -552,7 +574,7 @@ export function buildSeed(): DbShape {
     notifications: [],
     audits: [
       {
-        id: randomId(),
+        id: stableId("audit", "seed.demo"),
         actorId: ketut.id,
         action: "seed.demo",
         entity: "system",

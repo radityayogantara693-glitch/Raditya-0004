@@ -137,6 +137,7 @@ src/
 `src/lib/db/index.ts` selalu memakai **driver lokal** (`src/lib/db/local.ts`):
 
 - JSON store di `.data/db.json` untuk pengembangan/UAT;
+- ID data demo dibuat deterministik, sehingga cookie sesi tetap valid meski instance serverless membuat seed baru;
 - pemeriksaan bentrok dilakukan di dalam queue tulis sehingga dua request bersamaan tidak bisa lolos;
 - bila filesystem read-only, penyimpanan dilewati dan data hidup di memori proses.
 
