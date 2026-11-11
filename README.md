@@ -83,8 +83,9 @@ Kata sandi boleh diisi apa saja — autentikasi SSO disimulasikan. Pilih kartu a
 | --- | --- | --- |
 | `SESSION_SECRET` | Produksi | Kunci HMAC cookie sesi (min. 32 karakter). |
 | `CRON_SECRET` | Produksi | Token endpoint cron. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Produksi | URL project Supabase. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Produksi | Service role key (server-only, jangan diekspos ke klien). |
+| `SUPABASE_URL` | Produksi | URL project Supabase. Dibaca saat runtime (disarankan). |
+| `SUPABASE_SERVICE_ROLE_KEY` | Produksi | Service role key (server-only, jangan diekspos ke klien). Wajib untuk menulis data. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Kompatibilitas | Alternatif `SUPABASE_URL`; di-inline saat build sehingga perlu redeploy bila baru diubah. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Opsional | Disiapkan untuk integrasi Supabase Auth/klien lain. |
 | `EMAIL_DRIVER` | Opsional | `mock` (default) atau `resend`. |
 | `RESEND_API_KEY` | Opsional | Diperlukan bila `EMAIL_DRIVER=resend`. |
@@ -246,10 +247,11 @@ Penjadwalan produksi (pilih salah satu):
 
 Tabel Supabase production awalnya kosong. Isi akun demo + katalog ruangan dengan salah satu cara:
 
-- **SQL Manual:** buka Supabase SQL Editor, jalankan berkas `supabase/seed-demo-data.sql`. Berkas berisi 5 akun demo dan 29 ruangan (idempotent, aman diulang).
-- **Endpoint otomatis:** panggil `POST /api/admin/seed?secret=SEED_SECRET` (atau header `Authorization: Bearer SEED_SECRET`). Endpoint menanam pengguna dan ruangan dari `src/lib/db/seed.ts` ke Supabase lewat service role (idempotent via `ON CONFLICT`).
+- **Otomatis saat login (self-heal):** login dengan salah satu dari 5 akun demo. Bila akun belum ada, aplikasi menanam akun demo + 29 ruangan secara idempoten (data yang sudah ada tidak ditimpa). Syarat: skema tabel sudah dibuat dan `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` terpasang.
+- **SQL Manual:** buka Supabase SQL Editor, jalankan berkas `supabase/seed-demo-data.sql`. Berkas berisi skema lengkap + 5 akun demo dan 29 ruangan (idempotent, aman diulang). **Wajib dijalankan minimal sekali** untuk membuat tabel/RPC.
+- **Endpoint otomatis:** buka `GET /api/admin/seed?secret=SEED_SECRET` di browser, atau `POST /api/admin/seed` dengan header `Authorization: Bearer SEED_SECRET`. Endpoint menanam pengguna dan ruangan dari `src/lib/db/seed.ts` ke Supabase lewat service role (idempotent via `ON CONFLICT`).
 
-Atur variabel `SEED_SECRET` di Vercel (Settings → Environment Variables) sebelum menggunakan endpoint.
+Atur variabel `SEED_SECRET` di Vercel (Settings → Environment Variables) sebelum menggunakan endpoint. Setelah mengubah environment variable, lakukan **Redeploy**.
 
 ### Ekspor laporan
 

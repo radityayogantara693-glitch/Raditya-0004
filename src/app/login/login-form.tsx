@@ -107,7 +107,8 @@ export function LoginForm({ next }: { next?: string }) {
             ))}
           </div>
           <p className="text-[11px] leading-relaxed text-muted">
-            Pilih akun di atas lalu tekan masuk. Kata sandi demo dapat diisi apa saja.
+            Pilih akun di atas lalu tekan masuk. Kata sandi demo dapat diisi apa saja. Data demo
+            disiapkan otomatis saat login pertama.
           </p>
         </div>
       </div>

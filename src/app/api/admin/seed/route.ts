@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createClient } from "@supabase/supabase-js";
 
+import { supabaseConfig } from "@/lib/db";
 import { buildSeed } from "@/lib/db/seed";
 
 export const dynamic = "force-dynamic";
@@ -27,23 +28,28 @@ function requireSecret(request: NextRequest): { ok: true } | Response {
 }
 
 /**
- * Menanam data demo (akun + katalog ruangan) ke tabel Supabase production.
- * Dilindungi SEED_SECRET. Jalankan sekali setelah deploy:
- *   POST /api/admin/seed?secret=SEED_SECRET
- *   atau dengan header Authorization: Bearer SEED_SECRET
+ * Menanam/menyegarkan data demo (akun + katalog ruangan) ke Supabase production.
+ * Dilindungi SEED_SECRET. Bisa dipicu dari browser (GET) maupun curl (POST):
  *
- * Hanya menyisipkan pengguna dan ruangan (idempotent via ON CONFLICT).
- * Pengajuan/tiket dapat dibuat melalui aplikasi setelah akun tersedia.
+ *   GET  /api/admin/seed?secret=SEED_SECRET
+ *   POST /api/admin/seed?secret=SEED_SECRET
+ *   POST /api/admin/seed  (header Authorization: Bearer SEED_SECRET)
+ *
+ * Hanya menyentuh tabel users dan rooms (idempotent via ON CONFLICT).
+ * Pengajuan, tiket, notifikasi, dan audit tetap dibuat lewat alur aplikasi.
  */
-export async function POST(request: NextRequest): Promise<Response> {
+async function seedDemoData(request: NextRequest): Promise<Response> {
   const auth = requireSecret(request);
   if (!auth.ok) return auth;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const { url, key } = supabaseConfig();
   if (!url || !key) {
     return NextResponse.json(
-      { ok: false, error: "Supabase belum dikonfigurasi (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)." },
+      {
+        ok: false,
+        error:
+          "Supabase belum dikonfigurasi. Atur SUPABASE_URL (atau NEXT_PUBLIC_SUPABASE_URL) dan SUPABASE_SERVICE_ROLE_KEY.",
+      },
       { status: 500 },
     );
   }
@@ -72,7 +78,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     onConflict: "email",
   });
   if (userError) {
-    return NextResponse.json({ ok: false, error: userError.message }, { status: 500 });
+    return NextResponse.json({ ok: false, error: `users: ${userError.message}` }, { status: 500 });
   }
 
   // 2. Upsert katalog ruangan (kunci: code).
@@ -94,7 +100,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     onConflict: "code",
   });
   if (roomError) {
-    return NextResponse.json({ ok: false, error: roomError.message }, { status: 500 });
+    return NextResponse.json({ ok: false, error: `rooms: ${roomError.message}` }, { status: 500 });
   }
 
   return NextResponse.json({
@@ -103,4 +109,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     users: users.length,
     rooms: rooms.length,
   });
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
+  return seedDemoData(request);
+}
+
+export async function GET(request: NextRequest): Promise<Response> {
+  return seedDemoData(request);
 }

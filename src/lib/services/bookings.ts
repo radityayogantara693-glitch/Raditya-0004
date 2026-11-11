@@ -186,19 +186,23 @@ export async function submitBookingAction(user: User, formData: FormData): Promi
     return { status: "error", message: result.error, values: raw };
   }
 
-  await audit(user.id, "booking.created", "booking", booking.id, {
+  // Supabase membangkitkan ID/code final di database. Gunakan objek hasil
+  // simpan agar tautan, audit, dan notifikasi memakai ID yang benar.
+  const saved = result.value;
+
+  await audit(user.id, "booking.created", "booking", saved.id, {
     roomId: room.id,
-    code: booking.code,
+    code: saved.code,
   });
 
-  const notification = notificationForSubmission(booking, room, user);
-  await sendNotification({ to: user.email, bookingId: booking.id, ...notification });
+  const notification = notificationForSubmission(saved, room, user);
+  await sendNotification({ to: user.email, bookingId: saved.id, ...notification });
 
   refreshViews();
   return {
     status: "success",
-    message: `Pengajuan ${booking.code} terkirim. Admin Sarpras akan meninjau dalam target ${RULES.approvalTargetHours} jam kerja.`,
-    bookingId: booking.id,
+    message: `Pengajuan ${saved.code} terkirim. Admin Sarpras akan meninjau dalam target ${RULES.approvalTargetHours} jam kerja.`,
+    bookingId: saved.id,
   };
 }
 
