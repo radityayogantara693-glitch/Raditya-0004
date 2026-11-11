@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ArrowRight, CalendarCheck2, Clock, LifeBuoy, MessagesSquare, QrCode, Zap } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/session";
-import { isDemoMode } from "@/lib/db";
 import { safeNextPath } from "@/lib/utils";
 import { BrandLockup } from "@/components/layout/brand";
 import { LoginForm } from "./login-form";
@@ -183,7 +182,7 @@ export default async function LoginPage({
               </p>
             </div>
 
-            <LoginForm next={params.next} demoMode={isDemoMode} />
+            <LoginForm next={params.next} />
           </div>
         </div>
       </section>

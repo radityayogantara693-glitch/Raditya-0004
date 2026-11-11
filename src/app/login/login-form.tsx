@@ -11,7 +11,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 
-export function LoginForm({ next, demoMode }: { next?: string; demoMode: boolean }) {
+export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const [email, setEmail] = useState("putu@idb.ac.id");
   const [password, setPassword] = useState("idb-demo");
@@ -75,8 +75,7 @@ export function LoginForm({ next, demoMode }: { next?: string; demoMode: boolean
         </Button>
       </form>
 
-      {demoMode ? (
-        <div className="space-y-2 rounded-xl border border-line bg-paper/70 p-3.5">
+      <div className="space-y-2 rounded-xl border border-line bg-paper/70 p-3.5">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
             <ShieldCheck aria-hidden className="h-3.5 w-3.5" /> Akun demo
           </p>
@@ -111,7 +110,6 @@ export function LoginForm({ next, demoMode }: { next?: string; demoMode: boolean
             Pilih akun di atas lalu tekan masuk. Kata sandi demo dapat diisi apa saja.
           </p>
         </div>
-      ) : null}
-    </div>
-  );
-}
+      </div>
+    );
+  }
