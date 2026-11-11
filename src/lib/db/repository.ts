@@ -27,7 +27,7 @@ export interface CheckInResult {
 }
 
 export interface Repository {
-  readonly driver: "local" | "supabase";
+  readonly driver: "local";
 
   // Users
   getUserByEmail(email: string): Promise<User | null>;

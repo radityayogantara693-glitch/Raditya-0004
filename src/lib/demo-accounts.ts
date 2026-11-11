@@ -3,7 +3,7 @@ import type { Role } from "@/types";
 /**
  * Akun demo statis yang ditampilkan di halaman login.
  * Harus selaras dengan `buildSeed()` (src/lib/db/seed.ts) agar tombol klik
- * langsung mengisi email yang benar-benar terdaftar di Supabase.
+ * langsung mengisi email yang benar-benar terdaftar.
  */
 export const DEMO_ACCOUNTS: Array<{ email: string; label: string; role: Role; hint: string }> = [
   { email: "putu@idb.ac.id", label: "Putu Anindya", role: "MAHASISWA", hint: "Ketua UKM Fotografi" },

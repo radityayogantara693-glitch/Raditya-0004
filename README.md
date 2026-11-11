@@ -2,7 +2,7 @@
 
 Portal peminjaman ruangan untuk sivitas **Institut Desain dan Bisnis Bali** — menggantikan alur WhatsApp/surat fisik dengan katalog real-time, pengajuan tervalidasi, persetujuan Sarpras, dan tiket QR untuk check-in di gedung.
 
-Dibangun dengan **Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS**, dengan **Supabase/PostgreSQL** sebagai jalur produksi dan **driver demo lokal** agar aplikasi langsung bisa dijalankan tanpa kredensial.
+Dibangun dengan **Next.js (App Router) + React 19 + TypeScript + Tailwind CSS** dan **driver demo lokal** berbasis JSON, sehingga aplikasi langsung bisa dijalankan tanpa kredensial atau layanan eksternal.
 
 ---
 
@@ -45,11 +45,12 @@ npm run dev
 
 Buka **http://localhost:3000**.
 
-Tanpa `NEXT_PUBLIC_SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY`, aplikasi otomatis memakai **driver demo lokal**:
+Aplikasi memakai **driver demo lokal** tanpa layanan basis data eksternal:
 
 - data disimpan di `.data/db.json` (dibuat otomatis + di-seed saat request pertama);
 - katalog awal berisi 29 ruangan kampus: Gedung A/B/C, aula, studio foto, rooftop, inbis, halaman, gedung serba guna, dan Gear Inc;
 - penulisan diserialisasi lewat queue sehingga uji anti-bentrok tetap valid;
+- bila filesystem read-only (mis. Vercel), penulisan dilewati dan data disimpan di memori;
 - banner “Mode demo lokal” tampil di header.
 
 Hapus folder `.data/` untuk mengembalikan data demo ke kondisi awal.
@@ -83,17 +84,13 @@ Kata sandi boleh diisi apa saja — autentikasi SSO disimulasikan. Pilih kartu a
 | --- | --- | --- |
 | `SESSION_SECRET` | Produksi | Kunci HMAC cookie sesi (min. 32 karakter). |
 | `CRON_SECRET` | Produksi | Token endpoint cron. |
-| `SUPABASE_URL` | Produksi | URL project Supabase. Dibaca saat runtime (disarankan). |
-| `SUPABASE_SERVICE_ROLE_KEY` | Produksi | Service role key (server-only, jangan diekspos ke klien). Wajib untuk menulis data. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Kompatibilitas | Alternatif `SUPABASE_URL`; di-inline saat build sehingga perlu redeploy bila baru diubah. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Opsional | Disiapkan untuk integrasi Supabase Auth/klien lain. |
 | `EMAIL_DRIVER` | Opsional | `mock` (default) atau `resend`. |
 | `RESEND_API_KEY` | Opsional | Diperlukan bila `EMAIL_DRIVER=resend`. |
 | `EMAIL_FROM` | Opsional | Alamat pengirim, mis. `noreply@idb.ac.id`. |
 | `NEXT_PUBLIC_APP_URL` | Opsional | Base URL untuk tautan verifikasi tiket. |
-| `DATA_DIR` | Opsional | Lokasi penyimpanan mode demo (default `./.data`). |
+| `DATA_DIR` | Opsional | Lokasi penyimpanan driver lokal (default `./.data`). |
 
-> **Penting:** jangan pernah memakai `SUPABASE_SERVICE_ROLE_KEY` di komponen klien. Kode hanya membacanya di server (`src/lib/db/supabase.ts`).
+> Tidak ada kredensial basis data eksternal. Cukup `npm install` lalu `npm run dev`.
 
 ---
 
@@ -123,7 +120,7 @@ src/
 │  └─ layout/                # app shell + navigasi
 ├─ lib/
 │  ├─ auth/session.ts        # cookie HMAC httpOnly, 8 jam
-│  ├─ db/                    # repository + driver local & supabase + seed
+│  ├─ db/                    # repository + driver lokal + seed
 │  ├─ services/              # aturan bisnis & query baca
 │  ├─ rules.ts               # ambang batas bisnis terpusat
 │  ├─ validation.ts          # skema Zod
@@ -133,52 +130,35 @@ src/
 │  └─ ticket.ts              # helper tiket aman untuk browser
 ├─ types/index.ts            # tipe domain & label
 └─ middleware.ts             # gerbang sesi
-supabase/
-├─ migrations/0001_init.sql  # skema + RPC + RLS
-└─ seed.sql                  # data awal pengguna & ruangan
 ```
 
-### Dua driver database
+### Driver database
 
-`src/lib/db/index.ts` memilih driver berdasarkan environment:
+`src/lib/db/index.ts` selalu memakai **driver lokal** (`src/lib/db/local.ts`):
 
-- **`supabase`** — dipakai jika URL + service role tersedia. Mutasi memakai RPC PL/pgSQL (`create_booking`, `approve_booking`, dst.).
-- **`local`** — JSON store untuk pengembangan/UAT. Pemeriksaan bentrok dilakukan di dalam queue tulis sehingga dua request bersamaan tidak bisa lolos.
+- JSON store di `.data/db.json` untuk pengembangan/UAT;
+- pemeriksaan bentrok dilakukan di dalam queue tulis sehingga dua request bersamaan tidak bisa lolos;
+- bila filesystem read-only, penyimpanan dilewati dan data hidup di memori proses.
 
-Antarmuka yang sama (`src/lib/db/repository.ts`) menjaga agar seluruh halaman dan service tidak bergantung pada driver.
+Antarmuka `src/lib/db/repository.ts` menjaga agar seluruh halaman dan service tidak bergantung pada detail penyimpanan.
 
 ---
 
-## 5. Skema database & keamanan
+## 5. Penyimpanan lokal & keamanan
 
-Skema lengkap ada di `supabase/migrations/0001_init.sql`:
+Data disimpan di `.data/db.json` dengan struktur:
 
-- **Tabel:** `users`, `rooms`, `bookings`, `qr_tickets`, `notifications`, `audit_logs`.
+- **Koleksi:** `users`, `rooms`, `bookings`, `tickets`, `notifications`, `audits`.
 - **Anti-bentrok berlapis:**
-  - `EXCLUDE USING gist (room_id WITH =, tstzrange(start_at, end_at, '[)') WITH &&) WHERE status IN ('pending','approved','checked_in')` — jaminan terakhir di level database;
-  - `pg_advisory_xact_lock` per `room + tanggal` di RPC `create_booking` agar dua request bersamaan antre, bukan saling menimpa;
-  - validasi server (Zod, jam operasional, kapasitas, kuota) sebelum RPC dipanggil.
-- **Transisi status hanya lewat RPC:** `approve_booking` (sekaligus menerbitkan tiket), `reject_booking`, `cancel_booking`, `check_in_ticket`, `release_no_shows`, `complete_finished`.
-- **RLS aktif** untuk semua tabel. Aplikasi mengakses database lewat service role di server; policy `select` disediakan untuk pemilik data/admin bila project dibuka ke Supabase Auth.
+  - queue tulis serial di `src/lib/db/local.ts` sehingga dua request bersamaan antre, bukan saling menimpa;
+  - validasi server (Zod, jam operasional, kapasitas, kuota) sebelum data ditulis.
+- **Transisi status** divalidasi di service (`src/lib/services/bookings.ts`): setujui (sekaligus menerbitkan tiket), tolak, batal, check-in, rilis no-show, dan penutupan sesi selesai.
 - **Audit log** mencatat pembuatan, persetujuan, penolakan, pembatalan, check-in, dan sweep no-show.
+- **Keamanan sesi:** cookie HMAC httpOnly; tidak ada kredensial pihak ketiga yang disimpan.
 
-### Menyiapkan Supabase
+### Mengatur ulang data demo
 
-1. Buat project di [supabase.com](https://supabase.com).
-2. Jalankan migrasi:
-   ```bash
-   supabase link --project-ref <ref>
-   supabase db push
-   ```
-   atau tempel `supabase/migrations/0001_init.sql` lalu `supabase/seed.sql` di SQL Editor.
-3. Isi `.env.local`:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-   SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-   SESSION_SECRET=<32+ karakter acak>
-   CRON_SECRET=<token acak>
-   ```
-4. Restart `npm run dev`. Banner mode demo akan hilang dan seluruh data tersimpan di PostgreSQL.
+Hapus folder `.data/` lalu muat ulang aplikasi. Seed deterministik di `src/lib/db/seed.ts` akan dibuat kembali relatif terhadap tanggal hari ini. Pada filesystem read-only, data hanya bertahan selama proses server hidup.
 
 ---
 
@@ -241,17 +221,6 @@ Penjadwalan produksi (pilih salah satu):
 
 - **Vercel Cron** — `vercel.json` sudah menyertakan jadwal tiap hari pukul 00:00 UTC (`0 0 * * *`). Vercel mengirim header `Authorization: Bearer $CRON_SECRET` bila variabel tersebut diatur.
 - **cron-job.org / GitHub Actions** — panggil URL di atas tiap hari pukul 00:00 UTC.
-- **pg_cron** — buat job SQL yang memanggil `select public.release_no_shows(); select public.complete_finished();`. Catatan: email no-show hanya terkirim bila sweep dipanggil lewat endpoint aplikasi.
-
-### Seed data demo ke Supabase production
-
-Tabel Supabase production awalnya kosong. Isi akun demo + katalog ruangan dengan salah satu cara:
-
-- **Otomatis saat login (self-heal):** login dengan salah satu dari 5 akun demo. Bila akun belum ada, aplikasi menanam akun demo + 29 ruangan secara idempoten (data yang sudah ada tidak ditimpa). Syarat: skema tabel sudah dibuat dan `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` terpasang.
-- **SQL Manual:** buka Supabase SQL Editor, jalankan berkas `supabase/seed-demo-data.sql`. Berkas berisi skema lengkap + 5 akun demo dan 29 ruangan (idempotent, aman diulang). **Wajib dijalankan minimal sekali** untuk membuat tabel/RPC.
-- **Endpoint otomatis:** buka `GET /api/admin/seed?secret=SEED_SECRET` di browser, atau `POST /api/admin/seed` dengan header `Authorization: Bearer SEED_SECRET`. Endpoint menanam pengguna dan ruangan dari `src/lib/db/seed.ts` ke Supabase lewat service role (idempotent via `ON CONFLICT`).
-
-Atur variabel `SEED_SECRET` di Vercel (Settings → Environment Variables) sebelum menggunakan endpoint. Setelah mengubah environment variable, lakukan **Redeploy**.
 
 ### Ekspor laporan
 
@@ -292,7 +261,7 @@ npm run lint       # ESLint Next.js
 ## 10. Batasan & pengembangan lanjutan
 
 - **SSO mock:** autentikasi belum terhubung ke IdP kampus. Untuk produksi, ganti `loginAction` dengan OAuth/OIDC kampus lalu sinkronkan profil ke tabel `users`.
-- **Pemindaian kamera:** sudah memakai `jsQR` murni JavaScript (tanpa dependensi native). Catatan produksi: `getUserMedia` hanya jalan di konteks aman (HTTPS) — lewat IP LAN/HTTP, halaman otomatis menampilkan pesan agar petugas mengetik kode manual. Bila ingin deteksi native tanpa JS, `BarcodeDetector` dapat ditambahkan sebagai jalur cepat tanpa mengubah RPC verifikasi.
+- **Pemindaian kamera:** sudah memakai `jsQR` murni JavaScript (tanpa dependensi native). Catatan produksi: `getUserMedia` hanya jalan di konteks aman (HTTPS) — lewat IP LAN/HTTP, halaman otomatis menampilkan pesan agar petugas mengetik kode manual. Bila ingin deteksi native tanpa JS, `BarcodeDetector` dapat ditambahkan sebagai jalur cepat tanpa mengubah alur verifikasi.
 - **Pembekuan akun karena no-show:** `users.no_show_strikes` sudah dihitung dan ditampilkan, tetapi pembekuan otomatis (`suspended_until`) masih manual melalui admin/SQL.
 - **Blokir jadwal (RM-04):** belum ada UI; dapat ditambahkan sebagai tabel `room_blocks` dengan exclusion constraint serupa.
-- **Driver demo lokal** tidak ditujukan untuk multi-instance produksi — gunakan Supabase untuk deployment nyata.
+- **Driver demo lokal** tidak ditujukan untuk multi-instance produksi. Pada Vercel (filesystem read-only) data hanya bertahan di memori per instance; untuk produksi nyata, sambungkan kembali penyimpanan persisten (mis. PostgreSQL) di balik antarmuka `Repository`.

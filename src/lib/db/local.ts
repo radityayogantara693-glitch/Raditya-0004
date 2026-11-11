@@ -15,9 +15,9 @@ import { ticketCode, randomId, randomToken } from "@/lib/crypto";
 import { RULES } from "@/lib/rules";
 
 /**
- * Driver pengembangan/UAT: JSON store dengan queue tulis serial.
+ * Driver demo lokal: JSON store dengan queue tulis serial.
  * Pemeriksaan bentrok berjalan di dalam queue sehingga dua permintaan
- * bersamaan tidak bisa lolos (setara transaksi pada driver Supabase).
+ * bersamaan tidak bisa lolos.
  */
 
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(process.cwd(), ".data");
@@ -31,10 +31,16 @@ type GlobalCache = typeof globalThis & {
 const cache = globalThis as GlobalCache;
 
 async function persist(db: DbShape): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  const tmp = `${DB_FILE}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
-  await fs.rename(tmp, DB_FILE);
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const tmp = `${DB_FILE}.${process.pid}.tmp`;
+    await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
+    await fs.rename(tmp, DB_FILE);
+  } catch (error) {
+    // Filesystem read-only (mis. Vercel) atau gagal tulis: tetap lanjut dengan
+    // data di memori agar aplikasi tidak crash. Data tidak persisten.
+    console.warn("[db] gagal menyimpan .data/db.json; memakai data di memori:", (error as Error).message);
+  }
 }
 
 async function load(): Promise<DbShape> {

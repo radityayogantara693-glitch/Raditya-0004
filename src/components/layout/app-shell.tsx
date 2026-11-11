@@ -31,8 +31,8 @@ function DemoBanner() {
       <div className="container-app flex items-center gap-2 py-1.5 text-[11px] font-medium text-pending">
         <Info aria-hidden className="h-3.5 w-3.5 shrink-0" />
         <p>
-          Mode demo lokal — data tersimpan di <code className="font-mono">.data/db.json</code>. Hubungkan Supabase
-          untuk produksi.
+          Mode demo lokal — data tersimpan di <code className="font-mono">.data/db.json</code> (di memori bila
+          filesystem read-only).
         </p>
       </div>
     </div>

@@ -186,8 +186,8 @@ export async function submitBookingAction(user: User, formData: FormData): Promi
     return { status: "error", message: result.error, values: raw };
   }
 
-  // Supabase membangkitkan ID/code final di database. Gunakan objek hasil
-  // simpan agar tautan, audit, dan notifikasi memakai ID yang benar.
+  // Gunakan objek hasil simpan agar tautan, audit, dan notifikasi memakai
+  // ID yang benar (driver lokal mengembalikan objek yang tersimpan).
   const saved = result.value;
 
   await audit(user.id, "booking.created", "booking", saved.id, {
