@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import type { User } from "@/types";
 import { getRepository } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { loginSchema } from "@/lib/validation";
@@ -27,7 +28,21 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     };
   }
 
-  const user = await getRepository().getUserByEmail(parsed.data.email);
+  let user: User | null;
+  try {
+    user = await getRepository().getUserByEmail(parsed.data.email);
+  } catch (error) {
+    // Jangan biarkan kegagalan basis data/konfigurasi menjadi error server yang
+    // menampilkan halaman "This page couldn't load". Catat detailnya di log
+    // Vercel, lalu kembalikan pesan yang bisa dibaca pengguna.
+    console.error("[auth] gagal membaca user saat login:", error);
+    return {
+      error:
+        "Layanan akun sedang tidak dapat dihubungi. Coba beberapa saat lagi atau hubungi administrator kampus.",
+      email: rawEmail,
+    };
+  }
+
   if (!user) {
     return {
       error: "Akun SSO tidak terdaftar. Gunakan salah satu akun demo di bawah untuk mencoba sistem.",
